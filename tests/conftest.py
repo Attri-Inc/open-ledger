@@ -21,8 +21,17 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 @pytest.fixture(scope="session", autouse=True)
 def _seed_database():
-    """Seed the throwaway DB once for the whole test session."""
+    """Seed the throwaway DB once, and close the connection on teardown.
+
+    src.db caches a module-level aiosqlite connection whose worker thread is
+    non-daemon; without closing it the interpreter hangs at exit.
+    """
+    import asyncio
+
     import seed  # reads OPENLEDGER_DB (set above) at import time
 
     seed.main()
     yield
+    from src import db
+
+    asyncio.run(db.close_db())
