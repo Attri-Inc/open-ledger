@@ -19,7 +19,7 @@ from src import db  # noqa: E402
 from src.mcp_server import mcp  # noqa: E402
 
 PASS, FAIL = "✓", "✗"
-failures = []
+failures: list[str] = []
 
 
 def check(name: str, ok: bool, detail: str = ""):
@@ -31,8 +31,9 @@ def check(name: str, ok: bool, detail: str = ""):
 async def call(tool: str, **kwargs) -> dict | list:
     """Invoke a registered MCP tool by name, exactly as Claude would."""
     result = await mcp.call_tool(tool, kwargs)
-    text = result[0][0].text if isinstance(result, tuple) else result[0].text
-    return json.loads(text)
+    # FastMCP returns (content_list, ...) as a tuple; first content item is TextContent.
+    block = result[0][0] if isinstance(result, tuple) else result[0]  # type: ignore[index]
+    return json.loads(block.text)  # type: ignore[union-attr]
 
 
 async def main():
@@ -184,4 +185,5 @@ async def main():
     print(f"{PASS} ALL CHECKS PASSED — every tool verified against the seeded SQLite database")
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

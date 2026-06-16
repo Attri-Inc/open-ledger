@@ -48,7 +48,8 @@ async def get_account(account: str) -> str:
     if not result:
         return _json({"error": f"Account not found: {account}"})
     balance = await db.get_balance(account)
-    result.update({"balance_minor": balance["balance_minor"], "balance": balance["balance"]})
+    if balance:
+        result.update({"balance_minor": balance["balance_minor"], "balance": balance["balance"]})
     return _json(result)
 
 

@@ -7,6 +7,7 @@ Shared by the MCP server. SQLite double-entry ledger:
 """
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
 import aiosqlite
@@ -41,6 +42,14 @@ async def close_db():
         _db = None
 
 
+async def _rows(
+    db: aiosqlite.Connection, sql: str, params: Sequence[object] = ()
+) -> list[aiosqlite.Row]:
+    """Run a query and return rows as a real list (aiosqlite types fetchall as a
+    non-indexable Iterable; materializing it keeps both runtime and mypy happy)."""
+    return list(await db.execute_fetchall(sql, params))
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -73,7 +82,8 @@ async def _audit(
 async def resolve_account(identifier: str) -> dict | None:
     """Find an account by id, code, or name (case-insensitive)."""
     db = await get_db()
-    rows = await db.execute_fetchall(
+    rows = await _rows(
+        db,
         "SELECT * FROM accounts WHERE id = ? OR code = ? OR name = ? COLLATE NOCASE LIMIT 1",
         (identifier, identifier, identifier),
     )
@@ -98,8 +108,8 @@ async def list_accounts(
     if q:
         conditions.append("(name LIKE ? OR code LIKE ?)")
         params.extend([f"%{q}%", f"%{q}%"])
-    rows = await db.execute_fetchall(
-        f"SELECT * FROM accounts WHERE {' AND '.join(conditions)} ORDER BY code", params
+    rows = await _rows(
+        db, f"SELECT * FROM accounts WHERE {' AND '.join(conditions)} ORDER BY code", params
     )
     result = []
     for r in rows:
@@ -115,7 +125,8 @@ async def _account_balance(account_id: str, as_of: str | None = None) -> int:
     db = await get_db()
     date_clause = "AND t.txn_date <= ?" if as_of else ""
     params = [account_id] + ([as_of] if as_of else [])
-    rows = await db.execute_fetchall(
+    rows = await _rows(
+        db,
         f"""
         SELECT COALESCE(SUM(CASE WHEN l.direction = 'debit' THEN l.amount_minor ELSE -l.amount_minor END), 0) AS net_debit
         FROM entry_lines l
@@ -125,7 +136,7 @@ async def _account_balance(account_id: str, as_of: str | None = None) -> int:
         params,
     )
     net_debit = dict(rows[0])["net_debit"]
-    acct = await db.execute_fetchall("SELECT normal_side FROM accounts WHERE id = ?", [account_id])
+    acct = await _rows(db, "SELECT normal_side FROM accounts WHERE id = ?", [account_id])
     if not acct:
         return 0
     side = dict(acct[0])["normal_side"]
@@ -164,7 +175,8 @@ async def get_account_ledger(
     if date_to:
         conditions.append("t.txn_date <= ?")
         params.append(date_to)
-    rows = await db.execute_fetchall(
+    rows = await _rows(
+        db,
         f"""
         SELECT t.txn_date, t.description, t.reference, t.status, t.id AS transaction_id,
                l.direction, l.amount_minor, l.memo
@@ -206,11 +218,12 @@ async def get_account_ledger(
 
 async def get_transaction(txn_id: str) -> dict | None:
     db = await get_db()
-    rows = await db.execute_fetchall("SELECT * FROM transactions WHERE id = ?", [txn_id])
+    rows = await _rows(db, "SELECT * FROM transactions WHERE id = ?", [txn_id])
     if not rows:
         return None
     txn = dict(rows[0])
-    lines = await db.execute_fetchall(
+    lines = await _rows(
+        db,
         """
         SELECT l.line_no, l.direction, l.amount_minor, l.memo,
                a.code AS account_code, a.name AS account_name
@@ -258,12 +271,11 @@ async def search_transactions(
         params.append(acct["id"])
     where = " AND ".join(conditions)
 
-    count = await db.execute_fetchall(
-        f"SELECT COUNT(*) AS cnt FROM transactions t WHERE {where}", params
-    )
+    count = await _rows(db, f"SELECT COUNT(*) AS cnt FROM transactions t WHERE {where}", params)
     total = dict(count[0])["cnt"]
 
-    rows = await db.execute_fetchall(
+    rows = await _rows(
+        db,
         f"""
         SELECT t.id, t.txn_date, t.description, t.reference, t.status,
                t.reverses_id, t.reversed_by_id, t.source, t.created_by,
@@ -293,7 +305,8 @@ async def trial_balance(as_of: str | None = None) -> dict:
     db = await get_db()
     date_clause = "WHERE t.txn_date <= ?" if as_of else ""
     params = [as_of] if as_of else []
-    rows = await db.execute_fetchall(
+    rows = await _rows(
+        db,
         f"""
         SELECT a.id, a.code, a.name, a.type, a.normal_side,
                COALESCE(SUM(CASE WHEN le.direction = 'debit' THEN le.amount_minor ELSE 0 END), 0) AS debits,
@@ -352,7 +365,8 @@ async def _type_total(
     if date_to:
         conditions.append("t.txn_date <= ?")
         params.append(date_to)
-    rows = await db.execute_fetchall(
+    rows = await _rows(
+        db,
         f"""
         SELECT a.code, a.name, a.normal_side,
                COALESCE(SUM(CASE WHEN l.direction = 'debit' THEN l.amount_minor ELSE -l.amount_minor END), 0) AS net_debit
@@ -440,10 +454,9 @@ async def get_audit_log(
         conditions.append("actor = ?")
         params.append(actor)
     where = " AND ".join(conditions)
-    count = await db.execute_fetchall(
-        f"SELECT COUNT(*) AS cnt FROM audit_log WHERE {where}", params
-    )
-    rows = await db.execute_fetchall(
+    count = await _rows(db, f"SELECT COUNT(*) AS cnt FROM audit_log WHERE {where}", params)
+    rows = await _rows(
+        db,
         f"SELECT * FROM audit_log WHERE {where} ORDER BY seq DESC LIMIT ? OFFSET ?",
         params + [limit, offset],
     )
@@ -634,7 +647,8 @@ async def reverse_transaction(txn_id: str, reason: str, actor: str = "mcp") -> d
             actor,
         ),
     )
-    lines = await db.execute_fetchall(
+    lines = await _rows(
+        db,
         "SELECT account_id, line_no, direction, amount_minor, memo FROM entry_lines WHERE transaction_id = ? ORDER BY line_no",
         [txn_id],
     )
@@ -684,5 +698,5 @@ async def run_query(sql: str) -> list[dict]:
         if forbidden in sql_stripped:
             raise ValueError(f"{forbidden} is not allowed — read-only queries only")
     db = await get_db()
-    rows = await db.execute_fetchall(sql)
+    rows = await _rows(db, sql)
     return [dict(r) for r in rows[:500]]
