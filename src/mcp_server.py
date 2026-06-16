@@ -8,14 +8,17 @@ from mcp.server.fastmcp import FastMCP
 from src import db
 from src.config import MCP_PORT
 
-mcp = FastMCP("openledger", instructions="""
+mcp = FastMCP(
+    "openledger",
+    instructions="""
 OpenLedger is a local-first double-entry accounting system.
 It provides tools to query the chart of accounts, balances, ledgers, transactions,
 and financial reports (trial balance, profit & loss, balance sheet), plus safe
 write tools to post balanced transactions, transfer funds, and reverse mistakes.
 All amounts are integer minor units (cents): 100 = $1.00.
 Transactions are immutable — corrections happen via reverse_transaction.
-""")
+""",
+)
 
 
 def _json(result) -> str:
@@ -26,9 +29,11 @@ def _json(result) -> str:
 # Accounts & balances (read)
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
-async def list_accounts(account_type: str | None = None, include_archived: bool = False,
-                        q: str | None = None) -> str:
+async def list_accounts(
+    account_type: str | None = None, include_archived: bool = False, q: str | None = None
+) -> str:
     """List the chart of accounts with current balances.
     Filter by type (asset, liability, equity, income, expense) or search by name/code.
     Use for "what accounts do we have?", "show all expense accounts"."""
@@ -59,8 +64,9 @@ async def get_balance(account: str, as_of: str | None = None) -> str:
 
 
 @mcp.tool()
-async def get_account_ledger(account: str, date_from: str | None = None,
-                             date_to: str | None = None, limit: int = 100) -> str:
+async def get_account_ledger(
+    account: str, date_from: str | None = None, date_to: str | None = None, limit: int = 100
+) -> str:
     """Get an account's ledger: every entry line with a running balance.
     Use for "show me all Bank activity", "Wallet A history in January"."""
     result = await db.get_account_ledger(account, date_from, date_to, limit)
@@ -73,6 +79,7 @@ async def get_account_ledger(account: str, date_from: str | None = None,
 # Transactions (read)
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 async def get_transaction(transaction_id: str) -> str:
     """Get a transaction with all its entry lines.
@@ -84,18 +91,27 @@ async def get_transaction(transaction_id: str) -> str:
 
 
 @mcp.tool()
-async def search_transactions(q: str | None = None, date_from: str | None = None,
-                              date_to: str | None = None, account: str | None = None,
-                              status: str | None = None, limit: int = 25, offset: int = 0) -> str:
+async def search_transactions(
+    q: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    account: str | None = None,
+    status: str | None = None,
+    limit: int = 25,
+    offset: int = 0,
+) -> str:
     """Search the journal. Filter by text (description/reference), date range,
     account (id/code/name), or status (posted, reversed).
     Use for "show January transactions", "find the payroll entries"."""
-    return _json(await db.search_transactions(q, date_from, date_to, account, status, limit, offset))
+    return _json(
+        await db.search_transactions(q, date_from, date_to, account, status, limit, offset)
+    )
 
 
 # ---------------------------------------------------------------------------
 # Reports (read)
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 async def get_trial_balance(as_of: str | None = None) -> str:
@@ -119,8 +135,9 @@ async def get_balance_sheet(as_of: str | None = None) -> str:
 
 
 @mcp.tool()
-async def get_audit_log(action: str | None = None, actor: str | None = None,
-                        limit: int = 25, offset: int = 0) -> str:
+async def get_audit_log(
+    action: str | None = None, actor: str | None = None, limit: int = 25, offset: int = 0
+) -> str:
     """Read the append-only audit log of every mutation.
     Actions: create_account, post_transaction, transfer_funds, reverse_transaction, seed.
     Use for "who did what?", "show recent activity"."""
@@ -131,9 +148,11 @@ async def get_audit_log(action: str | None = None, actor: str | None = None,
 # Writes
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
-async def create_account(code: str, name: str, account_type: str,
-                         description: str | None = None) -> str:
+async def create_account(
+    code: str, name: str, account_type: str, description: str | None = None
+) -> str:
     """Create a new account in the chart of accounts.
     account_type: asset, liability, equity, income, or expense.
     The normal side (debit/credit) is derived from the type.
@@ -145,8 +164,9 @@ async def create_account(code: str, name: str, account_type: str,
 
 
 @mcp.tool()
-async def post_transaction(txn_date: str, description: str, lines: list[dict],
-                           reference: str | None = None) -> str:
+async def post_transaction(
+    txn_date: str, description: str, lines: list[dict], reference: str | None = None
+) -> str:
     """Post a balanced journal transaction (immutable once posted).
     txn_date: YYYY-MM-DD. lines: at least 2 of
     {"account": "<id|code|name>", "direction": "debit"|"credit", "amount_minor": <cents>, "memo": "..."}.
@@ -155,18 +175,25 @@ async def post_transaction(txn_date: str, description: str, lines: list[dict],
     [{"account": "Cash", "direction": "debit", "amount_minor": 25000},
      {"account": "Sales Revenue", "direction": "credit", "amount_minor": 25000}]"""
     try:
-        return _json(await db.post_transaction(txn_date, description, lines, reference, actor="mcp"))
+        return _json(
+            await db.post_transaction(txn_date, description, lines, reference, actor="mcp")
+        )
     except ValueError as e:
         return _json({"error": str(e)})
 
 
 @mcp.tool()
-async def transfer_funds(from_account: str, to_account: str, amount_minor: int,
-                         txn_date: str, memo: str | None = None) -> str:
+async def transfer_funds(
+    from_account: str, to_account: str, amount_minor: int, txn_date: str, memo: str | None = None
+) -> str:
     """Transfer money between two accounts (convenience: builds a balanced 2-line transaction).
     amount_minor is integer cents. Use for "move $500 from Wallet A to Wallet B"."""
     try:
-        return _json(await db.transfer_funds(from_account, to_account, amount_minor, txn_date, memo, actor="mcp"))
+        return _json(
+            await db.transfer_funds(
+                from_account, to_account, amount_minor, txn_date, memo, actor="mcp"
+            )
+        )
     except ValueError as e:
         return _json({"error": str(e)})
 
@@ -185,6 +212,7 @@ async def reverse_transaction(transaction_id: str, reason: str) -> str:
 # ---------------------------------------------------------------------------
 # Raw query
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 async def run_query(sql: str) -> str:
