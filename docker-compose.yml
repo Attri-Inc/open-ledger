@@ -1,0 +1,15 @@
+services:
+  openledger:
+    build: .
+    # Bind to localhost only — never publish the ledger to the LAN by default.
+    ports:
+      - "127.0.0.1:8791:8791"
+    volumes:
+      - openledger-data:/data
+    environment:
+      - OPENLEDGER_DB=/data/openledger.db
+      - MCP_TRANSPORT=sse
+      - MCP_PORT=8791
+
+volumes:
+  openledger-data:

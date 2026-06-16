@@ -1,0 +1,2 @@
+# This directory holds the SQLite ledger database (gitignored).
+# Run `python scripts/seed.py` to create data/openledger.db.
