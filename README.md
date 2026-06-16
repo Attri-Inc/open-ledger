@@ -27,8 +27,8 @@ python run_mcp.py                 # stdio transport (default)
 For Claude Code:
 ```bash
 claude mcp add openledger -s user -- \
-  /Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/.venv/bin/python \
-  /Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/run_mcp.py
+  /absolute/path/to/open-ledger/.venv/bin/python \
+  /absolute/path/to/open-ledger/run_mcp.py
 ```
 
 See [docs/claude-connector.md](docs/claude-connector.md) for the full setup.

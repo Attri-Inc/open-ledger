@@ -3,7 +3,7 @@
 ## 1) Install dependencies
 
 ```bash
-cd /Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger
+cd /absolute/path/to/open-ledger
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -22,8 +22,8 @@ This creates `data/openledger.db` with 10 accounts, ~25 transactions
 
 ```bash
 claude mcp add openledger -s user -- \
-  /Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/.venv/bin/python \
-  /Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/run_mcp.py
+  /absolute/path/to/open-ledger/.venv/bin/python \
+  /absolute/path/to/open-ledger/run_mcp.py
 ```
 
 Then restart Claude Code (or run `/mcp` to check status).
@@ -36,12 +36,12 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` and add:
 {
   "mcpServers": {
     "openledger": {
-      "command": "/Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/.venv/bin/python",
+      "command": "/absolute/path/to/open-ledger/.venv/bin/python",
       "args": [
-        "/Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/run_mcp.py"
+        "/absolute/path/to/open-ledger/run_mcp.py"
       ],
       "env": {
-        "OPENLEDGER_DB": "/Users/sahilkhirsaria/Desktop/Workspace/Project/open-ledger/data/openledger.db"
+        "OPENLEDGER_DB": "/absolute/path/to/open-ledger/data/openledger.db"
       }
     }
   }
