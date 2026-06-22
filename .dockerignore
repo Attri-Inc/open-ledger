@@ -20,7 +20,7 @@ data/*.db-shm
 docs
 tests
 *.md
-LICENSE
+!README.md
 .DS_Store
 .vscode
 .idea
