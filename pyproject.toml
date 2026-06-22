@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "aiosqlite>=0.20.0",
-    "mcp[cli]>=1.27.2",
+    "mcp[cli]>=1.28.0",
 ]
 
 [project.optional-dependencies]
