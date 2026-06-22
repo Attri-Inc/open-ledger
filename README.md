@@ -57,6 +57,32 @@ See [docs/claude-connector.md](docs/claude-connector.md) for the full setup.
                          agent frameworks
 ```
 
+### Project structure
+
+A layered architecture (SOLID): the transport, business rules, and persistence
+are separated, and each depends only on the layer's abstraction — not its
+implementation. Swapping SQLite for Postgres later touches only `repositories/`
+and `container.py`.
+
+```
+src/
+├── domain/          pure constants + typed error hierarchy (no I/O)
+├── infrastructure/  Database connection, Unit of Work, id/clock helpers
+├── repositories/    protocols.py  — narrow Reader/Writer contracts
+│                    sqlite.py     — the only code that writes SQL (aiosqlite)
+├── services/        accounts · ledger · reports (Strategy) · audit · query
+│                    — the only layer with business rules / invariants
+├── serialization.py response/error envelope helpers
+├── container.py     composition root — wires SQLite repos into services
+└── mcp_server.py    thin MCP transport adapter over the services
+run_mcp.py           stdio entry point for Claude Desktop / Code
+scripts/             seed.py (sample data) · schema.sql · smoke_test.py
+tests/               service-level tests of the core invariants
+```
+
+Querying is **raw parameterized SQL over `aiosqlite`** (no ORM); all SQL lives
+behind the repository protocols, so services never see a query.
+
 ### Core invariants
 
 1. Every transaction has ≥ 2 entry lines and `sum(debits) == sum(credits)` — enforced
