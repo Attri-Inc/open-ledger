@@ -64,7 +64,7 @@ all over an append-only audit log.
 - Optimistic locking (`version`) on mutable rows; idempotency keys on writes.
 
 ### v0.3
-- React + TypeScript frontend mirroring the `open-ledger.html` demo,
+- React + TypeScript frontend (mirroring the original single-file demo),
   consuming the REST API.
 - Hash-chained, tamper-evident audit log with a `verify-audit-chain` command.
 

@@ -40,7 +40,7 @@ Homepage = "https://github.com/Attri-Inc/open-ledger"
 Issues = "https://github.com/Attri-Inc/open-ledger/issues"
 
 [project.scripts]
-openledger = "src.mcp_server:mcp.run"
+openledger = "src.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

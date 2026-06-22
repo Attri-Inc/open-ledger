@@ -1,6 +1,6 @@
 """Bootstrap a fresh OpenLedger SQLite database with the schema and sample data.
 
-The chart of accounts and January transactions mirror the open-ledger.html demo;
+The chart of accounts and January transactions mirror the original demo dataset;
 later months add recurring activity so recent-date queries return data.
 
 Usage:
@@ -14,11 +14,16 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import sys
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from src.money import format_minor as fmt  # noqa: E402  (needs ROOT on sys.path)
+
 SCHEMA_PATH = ROOT / "scripts" / "schema.sql"
 DB_PATH = Path(os.getenv("OPENLEDGER_DB", str(ROOT / "data" / "openledger.db")))
 
@@ -46,10 +51,6 @@ ACCOUNTS = [
 
 def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
-
-
-def fmt(minor: int) -> str:
-    return f"${minor / 100:,.2f}"
 
 
 def reset_db() -> sqlite3.Connection:
@@ -188,7 +189,7 @@ def reverse(
 
 
 def seed_transactions(conn: sqlite3.Connection, by_code: dict[str, str]) -> None:
-    # ── January 2026 — exactly the open-ledger.html demo data ──────────
+    # ── January 2026 — the original demo dataset ───────────────────────
     post(
         conn,
         by_code,

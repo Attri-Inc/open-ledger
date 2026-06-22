@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reversals, and an audit row written in the same DB transaction as every
   mutation.
 - `scripts/seed.py` bootstraps a fresh dev database with the chart of
-  accounts and transactions from the `open-ledger.html` demo plus recent
+  accounts and transactions from the original demo dataset plus recent
   monthly activity; it verifies the seeded books balance and fails loudly
   otherwise. `scripts/schema.sql` ships the canonical table definitions.
 - `scripts/smoke_test.py` exercises every MCP tool and asserts the

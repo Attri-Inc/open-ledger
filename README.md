@@ -1,11 +1,15 @@
 # OpenLedger
 
+[![CI](https://github.com/Attri-Inc/open-ledger/actions/workflows/ci.yml/badge.svg)](https://github.com/Attri-Inc/open-ledger/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+
 **Local-first double-entry accounting, queryable by humans and agents.**
 
 SQLite-backed ledger. MCP server with 15 tools. Immutable transactions,
 contra-posting corrections, append-only audit log.
 
-Sibling services: [open-crm](../../open-crm) (memory) · [openwatch](../../openwatch) (observability) · **openledger (money)**
+Part of a family of local-first agent services: open-crm (memory) · openwatch (observability) · **openledger (money)**.
 
 ---
 
@@ -90,3 +94,12 @@ See [docs/claude-connector.md](docs/claude-connector.md) for the full setup.
 - "Post a $250 cash sale for today."
 - "Move $500 from Wallet A to Wallet B."
 - "What was reversed recently, and why?"
+
+---
+
+## Contributing & License
+
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and our
+[Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities per [SECURITY.md](SECURITY.md).
+
+Licensed under the **Apache License 2.0** — see [LICENSE](LICENSE).

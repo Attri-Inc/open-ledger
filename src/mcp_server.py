@@ -231,10 +231,16 @@ async def run_query(sql: str) -> str:
 # Entry point
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
-    transport = os.getenv("MCP_TRANSPORT", "sse")  # "stdio" or "sse"
+
+def main() -> None:
+    """Console entry point. Honours MCP_TRANSPORT (stdio default, or sse)."""
+    transport = os.getenv("MCP_TRANSPORT", "stdio")  # "stdio" or "sse"
     if transport == "sse":
         os.environ.setdefault("FASTMCP_PORT", str(MCP_PORT))
         mcp.run(transport="sse")
     else:
         mcp.run()
+
+
+if __name__ == "__main__":
+    main()

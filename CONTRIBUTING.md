@@ -10,9 +10,12 @@ cd open-ledger
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env
 python scripts/seed.py        # creates ./data/openledger.db with sample books
 ```
+
+Configuration is read from environment variables (see `.env.example` for the
+list, e.g. `OPENLEDGER_DB`). There is no automatic `.env` loading — export the
+variables in your shell if you want to override the defaults.
 
 ## Running the MCP server
 
@@ -28,12 +31,15 @@ python scripts/smoke_test.py  # exercises every tool + asserts invariants
 pytest                        # unit/integration tests
 ```
 
-## Linting
+## Linting & types
 
 ```bash
 ruff check .
-ruff format .
+ruff format --check .
+mypy . --ignore-missing-imports
 ```
+
+These are the same checks CI runs — run them before pushing.
 
 ## Pull request guidelines
 
@@ -58,4 +64,5 @@ See [SECURITY.md](SECURITY.md). Do not open a public issue for vulnerabilities.
 
 ## Code of conduct
 
-Be excellent to each other.
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By
+participating, you agree to uphold it.

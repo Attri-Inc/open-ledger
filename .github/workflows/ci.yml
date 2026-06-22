@@ -45,3 +45,15 @@ jobs:
 
       - name: Tests (pytest)
         run: pytest -q
+
+      - name: Smoke test (MCP tools end-to-end)
+        run: |
+          python scripts/seed.py
+          python scripts/smoke_test.py
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t openledger:ci .

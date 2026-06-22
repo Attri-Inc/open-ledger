@@ -1,6 +1,11 @@
 -- OpenLedger schema — double-entry accounting warehouse.
 -- Money is INTEGER minor units (cents). Transactions and entry lines are
 -- immutable: corrections happen via contra postings (reverse_transaction).
+--
+-- NOTE: the "every transaction is balanced (sum debits == sum credits) and has
+-- >= 2 lines" rule is an APPLICATION invariant enforced in db.post_transaction,
+-- not a DB constraint — SQLite cannot express it as a CHECK. Do not bypass the
+-- service layer with raw INSERTs.
 
 CREATE TABLE accounts (
   id          TEXT PRIMARY KEY,
@@ -22,7 +27,7 @@ CREATE TABLE transactions (
   description    TEXT NOT NULL,
   reference      TEXT,
   status         TEXT NOT NULL DEFAULT 'posted' CHECK (status IN ('posted','reversed')),
-  reverses_id    TEXT REFERENCES transactions(id),  -- set on the contra transaction
+  reverses_id    TEXT UNIQUE REFERENCES transactions(id),  -- contra target; UNIQUE = one reversal per txn
   reversed_by_id TEXT REFERENCES transactions(id),  -- the only field ever updated, set once
   source         TEXT NOT NULL DEFAULT 'mcp' CHECK (source IN ('api','mcp','ui','seed','import')),
   created_at     TEXT NOT NULL,
