@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src import db  # noqa: E402
+from src.container import container  # noqa: E402
 from src.mcp_server import mcp  # noqa: E402
 
 PASS, FAIL = "✓", "✗"
@@ -177,7 +177,7 @@ async def main():
         f"Office Supplies back to {supplies['balance']}",
     )
 
-    await db.close_db()
+    await container.close()
     print()
     if failures:
         print(f"{FAIL} {len(failures)} FAILED: {failures}")

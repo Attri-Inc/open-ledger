@@ -1,12 +1,18 @@
-"""OpenLedger MCP Server — 15 tools for double-entry accounting."""
+"""OpenLedger MCP Server — 15 tools for double-entry accounting.
 
-import json
+This module is a thin transport adapter: each tool holds no business logic — it
+calls a service (resolved from the composition root) and maps the result (or a
+typed DomainError) to a JSON envelope via the serialization helpers.
+"""
+
 import os
 
 from mcp.server.fastmcp import FastMCP
 
-from src import db
 from src.config import MCP_PORT
+from src.container import container
+from src.domain.errors import DomainError
+from src.serialization import error_response, tool_response
 
 mcp = FastMCP(
     "openledger",
@@ -21,10 +27,6 @@ Transactions are immutable — corrections happen via reverse_transaction.
 )
 
 
-def _json(result) -> str:
-    return json.dumps(result, default=str)
-
-
 # ---------------------------------------------------------------------------
 # Accounts & balances (read)
 # ---------------------------------------------------------------------------
@@ -37,20 +39,17 @@ async def list_accounts(
     """List the chart of accounts with current balances.
     Filter by type (asset, liability, equity, income, expense) or search by name/code.
     Use for "what accounts do we have?", "show all expense accounts"."""
-    return _json(await db.list_accounts(account_type, include_archived, q))
+    return tool_response(await container.accounts.list_accounts(account_type, include_archived, q))
 
 
 @mcp.tool()
 async def get_account(account: str) -> str:
     """Get one account by id, code (e.g. "1010"), or name (e.g. "Bank").
     Use for "tell me about the Bank account"."""
-    result = await db.resolve_account(account)
+    result = await container.accounts.with_balance(account)
     if not result:
-        return _json({"error": f"Account not found: {account}"})
-    balance = await db.get_balance(account)
-    if balance:
-        result.update({"balance_minor": balance["balance_minor"], "balance": balance["balance"]})
-    return _json(result)
+        return error_response(f"Account not found: {account}")
+    return tool_response(result)
 
 
 @mcp.tool()
@@ -58,10 +57,10 @@ async def get_balance(account: str, as_of: str | None = None) -> str:
     """Get an account's balance, optionally as of a date (YYYY-MM-DD).
     Balance is positive on the account's normal side.
     Use for "how much cash do we have?", "Bank balance at end of January?"."""
-    result = await db.get_balance(account, as_of)
+    result = await container.accounts.balance(account, as_of)
     if not result:
-        return _json({"error": f"Account not found: {account}"})
-    return _json(result)
+        return error_response(f"Account not found: {account}")
+    return tool_response(result)
 
 
 @mcp.tool()
@@ -70,10 +69,10 @@ async def get_account_ledger(
 ) -> str:
     """Get an account's ledger: every entry line with a running balance.
     Use for "show me all Bank activity", "Wallet A history in January"."""
-    result = await db.get_account_ledger(account, date_from, date_to, limit)
+    result = await container.accounts.ledger(account, date_from, date_to, limit)
     if not result:
-        return _json({"error": f"Account not found: {account}"})
-    return _json(result)
+        return error_response(f"Account not found: {account}")
+    return tool_response(result)
 
 
 # ---------------------------------------------------------------------------
@@ -85,10 +84,10 @@ async def get_account_ledger(
 async def get_transaction(transaction_id: str) -> str:
     """Get a transaction with all its entry lines.
     Use for "show me transaction txn_abc123"."""
-    result = await db.get_transaction(transaction_id)
+    result = await container.ledger.get_transaction(transaction_id)
     if not result:
-        return _json({"error": f"Transaction not found: {transaction_id}"})
-    return _json(result)
+        return error_response(f"Transaction not found: {transaction_id}")
+    return tool_response(result)
 
 
 @mcp.tool()
@@ -104,8 +103,8 @@ async def search_transactions(
     """Search the journal. Filter by text (description/reference), date range,
     account (id/code/name), or status (posted, reversed).
     Use for "show January transactions", "find the payroll entries"."""
-    return _json(
-        await db.search_transactions(q, date_from, date_to, account, status, limit, offset)
+    return tool_response(
+        await container.ledger.search(q, date_from, date_to, account, status, limit, offset)
     )
 
 
@@ -118,21 +117,21 @@ async def search_transactions(
 async def get_trial_balance(as_of: str | None = None) -> str:
     """Trial balance: every account's debit/credit balance. Totals must match.
     Use for "are the books balanced?", "trial balance as of March 31"."""
-    return _json(await db.trial_balance(as_of))
+    return tool_response(await container.reports.trial_balance(as_of))
 
 
 @mcp.tool()
 async def get_profit_loss(date_from: str | None = None, date_to: str | None = None) -> str:
     """Profit & loss: income minus expenses over a period.
     Use for "did we make money in January?", "P&L year to date"."""
-    return _json(await db.profit_loss(date_from, date_to))
+    return tool_response(await container.reports.profit_loss(date_from, date_to))
 
 
 @mcp.tool()
 async def get_balance_sheet(as_of: str | None = None) -> str:
     """Balance sheet: assets = liabilities + equity (incl. current earnings).
     Use for "what's our financial position?"."""
-    return _json(await db.balance_sheet(as_of))
+    return tool_response(await container.reports.balance_sheet(as_of))
 
 
 @mcp.tool()
@@ -142,7 +141,7 @@ async def get_audit_log(
     """Read the append-only audit log of every mutation.
     Actions: create_account, post_transaction, transfer_funds, reverse_transaction, seed.
     Use for "who did what?", "show recent activity"."""
-    return _json(await db.get_audit_log(action, actor, limit, offset))
+    return tool_response(await container.audit.list(action, actor, limit, offset))
 
 
 # ---------------------------------------------------------------------------
@@ -159,9 +158,11 @@ async def create_account(
     The normal side (debit/credit) is derived from the type.
     Use for "add an Office Supplies expense account with code 5200"."""
     try:
-        return _json(await db.create_account(code, name, account_type, description, actor="mcp"))
-    except ValueError as e:
-        return _json({"error": str(e)})
+        return tool_response(
+            await container.accounts.create(code, name, account_type, description, actor="mcp")
+        )
+    except DomainError as e:
+        return error_response(str(e))
 
 
 @mcp.tool()
@@ -176,11 +177,11 @@ async def post_transaction(
     [{"account": "Cash", "direction": "debit", "amount_minor": 25000},
      {"account": "Sales Revenue", "direction": "credit", "amount_minor": 25000}]"""
     try:
-        return _json(
-            await db.post_transaction(txn_date, description, lines, reference, actor="mcp")
+        return tool_response(
+            await container.ledger.post(txn_date, description, lines, reference, actor="mcp")
         )
-    except ValueError as e:
-        return _json({"error": str(e)})
+    except DomainError as e:
+        return error_response(str(e))
 
 
 @mcp.tool()
@@ -190,13 +191,13 @@ async def transfer_funds(
     """Transfer money between two accounts (convenience: builds a balanced 2-line transaction).
     amount_minor is integer cents. Use for "move $500 from Wallet A to Wallet B"."""
     try:
-        return _json(
-            await db.transfer_funds(
+        return tool_response(
+            await container.ledger.transfer(
                 from_account, to_account, amount_minor, txn_date, memo, actor="mcp"
             )
         )
-    except ValueError as e:
-        return _json({"error": str(e)})
+    except DomainError as e:
+        return error_response(str(e))
 
 
 @mcp.tool()
@@ -205,9 +206,9 @@ async def reverse_transaction(transaction_id: str, reason: str) -> str:
     The original is preserved and marked 'reversed' — nothing is ever deleted.
     Use for "undo that duplicate rent payment"."""
     try:
-        return _json(await db.reverse_transaction(transaction_id, reason, actor="mcp"))
-    except ValueError as e:
-        return _json({"error": str(e)})
+        return tool_response(await container.ledger.reverse(transaction_id, reason, actor="mcp"))
+    except DomainError as e:
+        return error_response(str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -222,9 +223,9 @@ async def run_query(sql: str) -> str:
     Only SELECT is allowed — no mutations.
     Use as an escape hatch when other tools don't cover the question."""
     try:
-        return _json(await db.run_query(sql))
-    except ValueError as e:
-        return _json({"error": str(e)})
+        return tool_response(await container.queries.run(sql))
+    except DomainError as e:
+        return error_response(str(e))
 
 
 # ---------------------------------------------------------------------------
