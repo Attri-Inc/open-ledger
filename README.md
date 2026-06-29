@@ -13,6 +13,16 @@ Part of a family of local-first agent services: open-crm (memory) · openwatch (
 
 ---
 
+## See it in action
+
+OpenLedger connected to Claude (Cowork) over MCP, answering live questions
+against the ledger — the figures match the seed data and test suite exactly
+(cash position of $49,900 across four accounts; January P&L of −$800 net).
+
+![OpenLedger answering accounting questions in Claude Cowork via MCP](docs/images/cowork-demo.png)
+
+---
+
 ## Quick Start
 
 ```bash
