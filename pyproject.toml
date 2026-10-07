@@ -36,7 +36,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Attri-Inc/open-ledger"
+Homepage = "https://open-ledger.ai"
+Source = "https://github.com/Attri-Inc/open-ledger"
 Issues = "https://github.com/Attri-Inc/open-ledger/issues"
 
 [project.scripts]
