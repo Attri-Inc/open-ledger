@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Pin `mcp[cli]` below 2. The 2.x SDK removed `mcp.server.fastmcp`, so a fresh
+  install resolved 2.x and the MCP server failed to start.
+
 ## [0.1.0] — 2026-06-16
 
 ### Added

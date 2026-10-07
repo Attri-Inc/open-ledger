@@ -24,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "aiosqlite>=0.22.1",
-    "mcp[cli]>=1.28.0",
+    "mcp[cli]>=1.28.0,<2",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +36,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Attri-Inc/open-ledger"
+Homepage = "https://open-ledger.ai"
+Source = "https://github.com/Attri-Inc/open-ledger"
 Issues = "https://github.com/Attri-Inc/open-ledger/issues"
 
 [project.scripts]
